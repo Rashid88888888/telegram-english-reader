@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>English Reader</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #222;
+    }
+    .card {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 28px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .text-view {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #fafafa;
+      line-height: 1.7;
+      border: 1px solid #eee;
+    }
+    .word {
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+    .word:hover {
+      background: #e8f0ff;
+    }
+    .hint {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #eef6ff;
+    }
+    button {
+      margin-top: 12px;
+      background: #2f80ed;
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>English Reader</h1>
+    <p>Вставь английский текст, затем нажимай на слова.</p>
+
+    <textarea id="inputText">Success is not final, failure is not fatal: it is the courage to continue that counts.</textarea>
+    <br />
+    <button onclick="renderText()">Показать текст</button>
+
+    <div class="text-view" id="textView"></div>
+
+    <div class="hint" id="hintBox">
+      Нажми на любое слово, и здесь позже будет показываться перевод.
+    </div>
+  </div>
+
+  <script>
+    function renderText() {
+      const input = document.getElementById("inputText").value;
+      const words = input.split(/(\s+)/);
+      const html = words.map(part => {
+        if (part.trim() === "") return part;
+        return `<span class="word" onclick="selectWord('${part.replace(/'/g, "\\'")}')">${part}</span>`;
+      }).join("");
+      document.getElementById("textView").innerHTML = html;
+    }
+
+    function selectWord(word) {
+      document.getElementById("hintBox").innerText =
+        `Ты нажал на слово: ${word}. Позже здесь будет перевод и объяснение.`;
+    }
+
+    renderText();
+  </script>
+</body>
+</html>
