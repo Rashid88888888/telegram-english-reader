@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>English Reader</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,6 +59,7 @@
     }
     button {
       margin-top: 12px;
+      margin-right: 10px;
       background: #2f80ed;
       color: white;
       border: none;
@@ -65,6 +67,9 @@
       border-radius: 10px;
       font-size: 16px;
       cursor: pointer;
+    }
+    .secondary {
+      background: #27ae60;
     }
   </style>
 </head>
@@ -76,28 +81,58 @@
     <textarea id="inputText">Success is not final, failure is not fatal: it is the courage to continue that counts.</textarea>
     <br />
     <button onclick="renderText()">Показать текст</button>
+    <button class="secondary" onclick="sendSelectedWord()">Сохранить слово в бота</button>
 
     <div class="text-view" id="textView"></div>
 
     <div class="hint" id="hintBox">
-      Нажми на любое слово, и здесь позже будет показываться перевод.
+      Нажми на любое слово, затем отправь его в бота.
     </div>
   </div>
 
   <script>
+    let selectedWord = "";
+
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.ready();
+      Telegram.WebApp.expand();
+    }
+
     function renderText() {
       const input = document.getElementById("inputText").value;
       const words = input.split(/(\s+)/);
       const html = words.map(part => {
         if (part.trim() === "") return part;
-        return `<span class="word" onclick="selectWord('${part.replace(/'/g, "\\'")}')">${part}</span>`;
+        const safeWord = part.replace(/'/g, "\\'");
+        return `<span class="word" onclick="selectWord('${safeWord}')">${part}</span>`;
       }).join("");
       document.getElementById("textView").innerHTML = html;
     }
 
     function selectWord(word) {
+      selectedWord = word;
       document.getElementById("hintBox").innerText =
-        `Ты нажал на слово: ${word}. Позже здесь будет перевод и объяснение.`;
+        `Выбрано слово: ${word}`;
+    }
+
+    function sendSelectedWord() {
+      if (!selectedWord) {
+        document.getElementById("hintBox").innerText =
+          "Сначала нажми на слово.";
+        return;
+      }
+
+      const data = JSON.stringify({
+        type: "save_word",
+        word: selectedWord
+      });
+
+      if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.sendData(data);
+      } else {
+        document.getElementById("hintBox").innerText =
+          "Открой страницу внутри Telegram Mini App.";
+      }
     }
 
     renderText();
