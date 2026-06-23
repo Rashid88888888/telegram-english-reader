@@ -6,6 +6,11 @@
   <title>English Reader</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     body {
       margin: 0;
       padding: 18px;
@@ -74,34 +79,26 @@
       color: white;
     }
 
-    .blue {
-      background: #3b82f6;
-    }
-
-    .green {
-      background: #22c55e;
-    }
-
-    .purple {
-      background: #8b5cf6;
-    }
-
-    .gray {
-      background: #6b7280;
-    }
+    .blue { background: #3b82f6; }
+    .green { background: #22c55e; }
+    .purple { background: #8b5cf6; }
+    .gray { background: #6b7280; }
+    .red { background: #ef4444; }
 
     .reader {
       font-size: 22px;
-      line-height: 1.9;
-      user-select: text;
-      -webkit-user-select: text;
+      line-height: 1.95;
       word-break: break-word;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     .word {
       cursor: pointer;
-      padding: 2px 3px;
-      border-radius: 6px;
+      padding: 3px 4px;
+      border-radius: 7px;
+      transition: background 0.15s ease, color 0.15s ease;
+      display: inline;
     }
 
     .word:hover {
@@ -110,6 +107,28 @@
 
     .word.active {
       background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .word.last-picked {
+      background: #bfdbfe;
+      color: #1e3a8a;
+    }
+
+    .phrase-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 16px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+
+    .phrase-text {
+      font-size: 20px;
+      line-height: 1.6;
+      min-height: 32px;
+      word-break: break-word;
+      font-weight: bold;
     }
 
     .info {
@@ -195,21 +214,11 @@
     }
 
     @media (max-width: 640px) {
-      body {
-        padding: 12px;
-      }
-
-      h1 {
-        font-size: 24px;
-      }
-
-      .reader {
-        font-size: 19px;
-      }
-
-      button {
-        width: 100%;
-      }
+      body { padding: 12px; }
+      h1 { font-size: 24px; }
+      .reader { font-size: 19px; }
+      .phrase-text { font-size: 18px; }
+      button { width: 100%; }
     }
   </style>
 </head>
@@ -223,13 +232,18 @@
 
       <div class="buttons">
         <button class="blue" id="showBtn">Показать текст</button>
-        <button class="purple" id="translateSelectionBtn">Перевести выделенное</button>
+        <button class="purple" id="translatePhraseBtn">Перевести фразу</button>
+        <button class="red" id="clearPhraseBtn">Очистить выбор</button>
         <button class="green" id="saveBtn">Сохранить в бота</button>
       </div>
 
       <div class="small">
-        Быстрый режим: нажми на одно слово.<br>
-        Режим фразы: выдели несколько слов пальцем и нажми «Перевести выделенное».
+        iPhone-режим: просто нажимай слова по очереди. Они соберутся в фразу без выделения пальцем.
+      </div>
+
+      <div class="phrase-box">
+        <div class="label">Собранная фраза</div>
+        <div class="phrase-text" id="phrasePreview">—</div>
       </div>
     </div>
 
@@ -241,7 +255,7 @@
     <div class="info">
       <div>Выбрано: <span class="value" id="selectedText">—</span></div>
       <div>Перевод: <span class="value" id="selectedTranslation">—</span></div>
-      <div class="small" id="statusText">Нажми на слово или выдели фразу.</div>
+      <div class="small" id="statusText">Нажимай слова подряд, потом жми «Перевести фразу».</div>
     </div>
   </div>
 
@@ -278,9 +292,11 @@
     const sourceText = document.getElementById("sourceText");
     const reader = document.getElementById("reader");
     const showBtn = document.getElementById("showBtn");
+    const translatePhraseBtn = document.getElementById("translatePhraseBtn");
+    const clearPhraseBtn = document.getElementById("clearPhraseBtn");
     const saveBtn = document.getElementById("saveBtn");
-    const translateSelectionBtn = document.getElementById("translateSelectionBtn");
 
+    const phrasePreview = document.getElementById("phrasePreview");
     const selectedTextEl = document.getElementById("selectedText");
     const selectedTranslationEl = document.getElementById("selectedTranslation");
     const statusText = document.getElementById("statusText");
@@ -294,6 +310,7 @@
 
     let currentSelectedText = "";
     let currentTranslation = "";
+    let selectedWords = [];
 
     const fallbackDictionary = {
       should: "следует; должен",
@@ -348,10 +365,43 @@
       popupOverlay.classList.remove("show");
     }
 
+    function updatePhrasePreview() {
+      const phrase = selectedWords.map(item => item.word).join(" ").trim();
+      phrasePreview.textContent = phrase || "—";
+      return phrase;
+    }
+
+    function refreshWordStyles() {
+      document.querySelectorAll('.word').forEach(el => {
+        el.classList.remove('active', 'last-picked');
+      });
+
+      selectedWords.forEach((item, index) => {
+        item.element.classList.add('active');
+        if (index === selectedWords.length - 1) {
+          item.element.classList.add('last-picked');
+        }
+      });
+    }
+
+    function clearPhrase(resetInfo = true) {
+      selectedWords = [];
+      refreshWordStyles();
+      phrasePreview.textContent = "—";
+
+      if (resetInfo) {
+        currentSelectedText = "";
+        currentTranslation = "";
+        selectedTextEl.textContent = "—";
+        selectedTranslationEl.textContent = "—";
+        statusText.textContent = "Выбор очищен. Нажимай слова заново.";
+      }
+    }
+
     function setLoading(originalText) {
       selectedTextEl.textContent = originalText || "—";
       selectedTranslationEl.textContent = "загружается...";
-      statusText.textContent = "Переводим...";
+      statusText.textContent = "Переводим фразу...";
 
       popupOriginal.textContent = originalText || "—";
       popupTranslated.textContent = "загружается...";
@@ -373,11 +423,7 @@
       if (!clean) return "—";
 
       try {
-        const url =
-          "https://api.mymemory.translated.net/get?q=" +
-          encodeURIComponent(clean) +
-          "&langpair=en|ru";
-
+        const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(clean) + "&langpair=en|ru";
         const response = await fetch(url);
         const data = await response.json();
         const translatedText = data?.responseData?.translatedText?.trim();
@@ -403,59 +449,63 @@
     }
 
     function renderText() {
-      const text = sourceText.value.trim();
+      clearPhrase(false);
 
+      const text = sourceText.value.trim();
       if (!text) {
         reader.innerHTML = "Сначала вставь текст.";
         return;
       }
 
       const parts = text.match(/[A-Za-z'-]+|[^A-Za-z'-]+/g) || [];
+      let wordIndex = 0;
 
       reader.innerHTML = parts.map(part => {
         if (/^[A-Za-z'-]+$/.test(part)) {
-          return `<span class="word" data-word="${part}">${part}</span>`;
+          const safeWord = part.replace(/"/g, '&quot;');
+          const html = `<span class="word" data-word="${safeWord}" data-index="${wordIndex}">${part}</span>`;
+          wordIndex += 1;
+          return html;
         }
         return part;
       }).join("");
 
-      document.querySelectorAll(".word").forEach(el => {
-        el.addEventListener("click", async () => {
-          const selectedByMouse = normalizeText(window.getSelection().toString());
+      document.querySelectorAll('.word').forEach(el => {
+        el.addEventListener('click', () => {
+          const word = normalizeText(el.dataset.word);
+          const index = Number(el.dataset.index);
 
-          if (selectedByMouse.length > 1) {
-            return;
+          const existingIndex = selectedWords.findIndex(item => item.index === index);
+
+          if (existingIndex >= 0) {
+            selectedWords.splice(existingIndex, 1);
+            statusText.textContent = 'Слово убрано из фразы.';
+          } else {
+            selectedWords.push({ index, word, element: el });
+            selectedWords.sort((a, b) => a.index - b.index);
+            statusText.textContent = 'Слово добавлено. Продолжай собирать фразу.';
           }
 
-          document.querySelectorAll(".word").forEach(w => w.classList.remove("active"));
-          el.classList.add("active");
-
-          currentSelectedText = normalizeWord(el.dataset.word);
-          currentTranslation = "";
-
-          openPopup();
-          setLoading(currentSelectedText);
-
-          const translated = await translateText(currentSelectedText);
-          currentTranslation = translated;
-
-          setResult(currentSelectedText, translated);
+          refreshWordStyles();
+          const phrase = updatePhrasePreview();
+          selectedTextEl.textContent = phrase || '—';
+          if (!phrase) {
+            selectedTranslationEl.textContent = '—';
+          }
         });
       });
     }
 
-    async function translateSelectedPhrase() {
-      const selected = normalizeText(window.getSelection().toString());
+    async function translatePhrase() {
+      const phrase = updatePhrasePreview();
 
-      if (!selected) {
-        alert("Сначала выдели несколько слов в тексте.");
+      if (!phrase || phrase === '—') {
+        alert('Сначала нажми несколько слов в тексте.');
         return;
       }
 
-      currentSelectedText = selected;
-      currentTranslation = "";
-
-      document.querySelectorAll(".word").forEach(w => w.classList.remove("active"));
+      currentSelectedText = phrase;
+      currentTranslation = '';
 
       openPopup();
       setLoading(currentSelectedText);
@@ -468,12 +518,12 @@
 
     function saveToBot() {
       if (!currentSelectedText) {
-        alert("Сначала выбери слово или выдели фразу.");
+        alert('Сначала собери и переведи фразу.');
         return;
       }
 
       const payload = {
-        type: "save_translation",
+        type: 'save_translation',
         original: currentSelectedText,
         translation: currentTranslation
       };
@@ -481,17 +531,18 @@
       if (tg) {
         tg.sendData(JSON.stringify(payload));
       } else {
-        alert("Telegram Mini App не найден");
+        alert('Telegram Mini App не найден');
       }
     }
 
-    showBtn.addEventListener("click", renderText);
-    translateSelectionBtn.addEventListener("click", translateSelectedPhrase);
-    saveBtn.addEventListener("click", saveToBot);
-    popupSaveBtn.addEventListener("click", saveToBot);
-    closePopupBtn.addEventListener("click", closePopup);
+    showBtn.addEventListener('click', renderText);
+    translatePhraseBtn.addEventListener('click', translatePhrase);
+    clearPhraseBtn.addEventListener('click', () => clearPhrase(true));
+    saveBtn.addEventListener('click', saveToBot);
+    popupSaveBtn.addEventListener('click', saveToBot);
+    closePopupBtn.addEventListener('click', closePopup);
 
-    popupOverlay.addEventListener("click", (e) => {
+    popupOverlay.addEventListener('click', (e) => {
       if (e.target === popupOverlay) {
         closePopup();
       }
