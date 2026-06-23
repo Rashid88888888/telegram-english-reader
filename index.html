@@ -22,13 +22,13 @@
     .container {
       max-width: 760px;
       margin: 0 auto;
-      padding-bottom: 96px;
+      padding-bottom: 150px;
     }
 
     h1 {
       text-align: center;
-      font-size: 22px;
-      margin: 0 0 12px;
+      font-size: 20px;
+      margin: 0 0 10px;
     }
 
     .card {
@@ -62,32 +62,9 @@
       border-color: #3b82f6;
     }
 
-    .buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    button {
-      border: none;
-      border-radius: 12px;
-      padding: 11px 14px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      color: white;
-    }
-
-    .blue { background: #3b82f6; }
-    .green { background: #22c55e; }
-    .purple { background: #8b5cf6; }
-    .gray { background: #6b7280; }
-    .red { background: #ef4444; }
-
     .reader {
-      font-size: 17px;
-      line-height: 1.8;
+      font-size: 16px;
+      line-height: 1.72;
       word-break: break-word;
       -webkit-user-select: none;
       user-select: none;
@@ -120,7 +97,7 @@
     }
 
     .phrase-text {
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.5;
       min-height: 24px;
       word-break: break-word;
@@ -131,7 +108,7 @@
       background: #eaf2fb;
       border-radius: 12px;
       padding: 12px;
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.6;
     }
 
@@ -198,7 +175,7 @@
     }
 
     .popup-value {
-      font-size: 17px;
+      font-size: 16px;
       line-height: 1.45;
       word-break: break-word;
     }
@@ -221,12 +198,12 @@
       bottom: 0;
       z-index: 998;
       padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-      background: rgba(243,244,246,0.96);
+      background: rgba(243,244,246,0.97);
       backdrop-filter: blur(10px);
       border-top: 1px solid #dbe1e7;
     }
 
-    .sticky-inner {
+    .sticky-grid {
       max-width: 760px;
       margin: 0 auto;
       display: grid;
@@ -234,16 +211,29 @@
       gap: 8px;
     }
 
-    .sticky-inner button {
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
       width: 100%;
     }
 
+    .blue { background: #3b82f6; }
+    .green { background: #22c55e; }
+    .purple { background: #8b5cf6; }
+    .gray { background: #6b7280; }
+    .red { background: #ef4444; }
+
     @media (max-width: 640px) {
       body { padding: 8px; }
-      h1 { font-size: 20px; }
-      .reader { font-size: 16px; line-height: 1.72; }
-      .phrase-text { font-size: 15px; }
-      .buttons button { flex: 1 1 calc(50% - 8px); }
+      h1 { font-size: 18px; }
+      .reader { font-size: 15px; }
+      .phrase-text { font-size: 14px; }
+      .popup-value { font-size: 15px; }
     }
   </style>
 </head>
@@ -254,12 +244,6 @@
     <div class="card">
       <div class="label">Вставь английский текст</div>
       <textarea id="sourceText" placeholder="Вставь сюда транскрибацию или любой английский текст"></textarea>
-
-      <div class="buttons">
-        <button class="blue" id="showBtn">Показать текст</button>
-        <button class="red" id="clearPhraseBtn">Очистить выбор</button>
-        <button class="green" id="saveBtn">Сохранить в словарь</button>
-      </div>
 
       <div class="small">
         Нажимай слова по очереди. Можно сохранять даже без перевода. После перевода выделение сбросится автоматически.
@@ -279,14 +263,16 @@
     <div class="info">
       <div>Выбрано: <span class="value" id="selectedText">—</span></div>
       <div>Перевод: <span class="value" id="selectedTranslation">—</span></div>
-      <div class="small" id="statusText">Нажимай слова подряд. Кнопка перевода всегда закреплена внизу экрана.</div>
+      <div class="small" id="statusText">Все действия теперь внизу экрана.</div>
     </div>
   </div>
 
   <div class="sticky-actions">
-    <div class="sticky-inner">
+    <div class="sticky-grid">
+      <button class="blue" id="showBtn">Показать текст</button>
+      <button class="red" id="clearPhraseBtn">Очистить выбор</button>
       <button class="purple" id="translateBtn">Перевести</button>
-      <button class="green" id="stickySaveBtn">Сохранить в словарь</button>
+      <button class="green" id="saveBtn">Сохранить в словарь</button>
     </div>
   </div>
 
@@ -326,7 +312,6 @@
     const translateBtn = document.getElementById("translateBtn");
     const clearPhraseBtn = document.getElementById("clearPhraseBtn");
     const saveBtn = document.getElementById("saveBtn");
-    const stickySaveBtn = document.getElementById("stickySaveBtn");
 
     const phrasePreview = document.getElementById("phrasePreview");
     const selectedTextEl = document.getElementById("selectedText");
@@ -409,14 +394,14 @@
     }
 
     function refreshWordStyles() {
-      document.querySelectorAll('.word').forEach(el => {
-        el.classList.remove('active', 'last-picked');
+      document.querySelectorAll(".word").forEach(el => {
+        el.classList.remove("active", "last-picked");
       });
 
       selectedWords.forEach((item, index) => {
-        item.element.classList.add('active');
+        item.element.classList.add("active");
         if (index === selectedWords.length - 1) {
-          item.element.classList.add('last-picked');
+          item.element.classList.add("last-picked");
         }
       });
     }
@@ -431,7 +416,7 @@
         currentTranslation = "";
         selectedTextEl.textContent = "—";
         selectedTranslationEl.textContent = "—";
-        statusText.textContent = "Выбор очищен. Нажимай слова заново.";
+        statusText.textContent = "Выбор очищен.";
       }
     }
 
@@ -448,7 +433,7 @@
     function setResult(originalText, translatedText) {
       selectedTextEl.textContent = originalText || "—";
       selectedTranslationEl.textContent = translatedText || "—";
-      statusText.innerHTML = '<span class="status-ok">Готово. Перевод получен и выделение сброшено.</span>';
+      statusText.innerHTML = '<span class="status-ok">Перевод готов. Выделение сброшено.</span>';
 
       popupOriginal.textContent = originalText || "—";
       popupTranslated.textContent = translatedText || "—";
@@ -507,19 +492,19 @@
         return part;
       }).join("");
 
-      document.querySelectorAll('.word').forEach(el => {
-        el.addEventListener('click', () => {
+      document.querySelectorAll(".word").forEach(el => {
+        el.addEventListener("click", () => {
           const word = normalizeText(el.dataset.word);
           const index = Number(el.dataset.index);
           const existingIndex = selectedWords.findIndex(item => item.index === index);
 
           if (existingIndex >= 0) {
             selectedWords.splice(existingIndex, 1);
-            statusText.textContent = 'Слово убрано из выбора.';
+            statusText.textContent = "Слово убрано из выбора.";
           } else {
             selectedWords.push({ index, word, element: el });
             selectedWords.sort((a, b) => a.index - b.index);
-            statusText.textContent = 'Слово добавлено.';
+            statusText.textContent = "Слово добавлено.";
           }
 
           refreshWordStyles();
@@ -532,12 +517,12 @@
       const phrase = getCurrentPhrase();
 
       if (!phrase) {
-        alert('Сначала нажми слово или несколько слов.');
+        alert("Сначала нажми слово или несколько слов.");
         return;
       }
 
       currentSelectedText = phrase;
-      currentTranslation = '';
+      currentTranslation = "";
 
       openPopup();
       setLoading(currentSelectedText);
@@ -547,21 +532,21 @@
 
       setResult(currentSelectedText, translated);
       clearPhrase(false);
-      phrasePreview.textContent = '—';
+      phrasePreview.textContent = "—";
     }
 
     function saveToBot() {
       const phrase = getCurrentPhrase();
       const textToSave = currentSelectedText || phrase;
-      const translationToSave = currentTranslation || '';
+      const translationToSave = currentTranslation || "";
 
       if (!textToSave) {
-        alert('Сначала выбери слово или фразу.');
+        alert("Сначала выбери слово или фразу.");
         return;
       }
 
       const payload = {
-        type: 'save_translation',
+        type: "save_translation",
         original: textToSave,
         translation: translationToSave
       };
@@ -569,24 +554,23 @@
       if (tg) {
         try {
           tg.sendData(JSON.stringify(payload));
-          statusText.innerHTML = '<span class="status-ok">Сохранение отправлено. Mini App может закрываться из-за sendData в Telegram.</span>';
+          statusText.innerHTML = '<span class="status-ok">Отправлено в Telegram. Mini App может закрываться из-за sendData().</span>';
         } catch (error) {
-          alert('Не удалось отправить данные в Telegram');
+          alert("Не удалось отправить данные в Telegram");
         }
       } else {
-        alert('Telegram Mini App не найден');
+        alert("Telegram Mini App не найден");
       }
     }
 
-    showBtn.addEventListener('click', renderText);
-    translateBtn.addEventListener('click', translateCurrentSelection);
-    clearPhraseBtn.addEventListener('click', () => clearPhrase(true));
-    saveBtn.addEventListener('click', saveToBot);
-    stickySaveBtn.addEventListener('click', saveToBot);
-    popupSaveBtn.addEventListener('click', saveToBot);
-    closePopupBtn.addEventListener('click', closePopup);
+    showBtn.addEventListener("click", renderText);
+    translateBtn.addEventListener("click", translateCurrentSelection);
+    clearPhraseBtn.addEventListener("click", () => clearPhrase(true));
+    saveBtn.addEventListener("click", saveToBot);
+    popupSaveBtn.addEventListener("click", saveToBot);
+    closePopupBtn.addEventListener("click", closePopup);
 
-    popupOverlay.addEventListener('click', (e) => {
+    popupOverlay.addEventListener("click", (e) => {
       if (e.target === popupOverlay) {
         closePopup();
       }
