@@ -47,18 +47,23 @@
       font-weight: bold;
     }
 
-    textarea {
+    textarea,
+    input[type="text"] {
       width: 100%;
-      min-height: 120px;
       border-radius: 12px;
       border: 1px solid #d1d5db;
       padding: 12px;
       font-size: 15px;
-      resize: vertical;
       outline: none;
     }
 
-    textarea:focus {
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    textarea:focus,
+    input[type="text"]:focus {
       border-color: #3b82f6;
     }
 
@@ -126,6 +131,17 @@
     .status-ok {
       color: #166534;
       font-weight: bold;
+    }
+
+    .status-warn {
+      color: #92400e;
+      font-weight: bold;
+    }
+
+    .link-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
     }
 
     .popup-overlay {
@@ -227,6 +243,7 @@
     .purple { background: #8b5cf6; }
     .gray { background: #6b7280; }
     .red { background: #ef4444; }
+    .orange { background: #f59e0b; }
 
     @media (max-width: 640px) {
       body { padding: 8px; }
@@ -240,6 +257,20 @@
 <body>
   <div class="container">
     <h1>English Reader</h1>
+
+    <div class="card">
+      <div class="label">Ссылка на Instagram Reel</div>
+      <div class="link-row">
+        <input
+          type="text"
+          id="reelUrl"
+          placeholder="Вставь сюда ссылку вида https://www.instagram.com/reel/..."
+        />
+      </div>
+      <div class="small">
+        Шаг 1: пока мы только добавили поле и кнопку для следующего этапа. Реальный импорт текста по ссылке подключим на следующем шаге через backend.
+      </div>
+    </div>
 
     <div class="card">
       <div class="label">Вставь английский текст</div>
@@ -263,12 +294,13 @@
     <div class="info">
       <div>Выбрано: <span class="value" id="selectedText">—</span></div>
       <div>Перевод: <span class="value" id="selectedTranslation">—</span></div>
-      <div class="small" id="statusText">Все действия теперь внизу экрана.</div>
+      <div class="small" id="statusText">Сейчас кнопка «Получить текст» только проверяет, вставлена ли ссылка. Подключение Instagram Reel будет на следующем шаге.</div>
     </div>
   </div>
 
   <div class="sticky-actions">
     <div class="sticky-grid">
+      <button class="orange" id="getReelTextBtn">Получить текст</button>
       <button class="blue" id="showBtn">Показать текст</button>
       <button class="red" id="clearPhraseBtn">Очистить выбор</button>
       <button class="purple" id="translateBtn">Перевести</button>
@@ -306,6 +338,8 @@
       tg.expand();
     }
 
+    const reelUrl = document.getElementById("reelUrl");
+    const getReelTextBtn = document.getElementById("getReelTextBtn");
     const sourceText = document.getElementById("sourceText");
     const reader = document.getElementById("reader");
     const showBtn = document.getElementById("showBtn");
@@ -554,7 +588,7 @@
       if (tg) {
         try {
           tg.sendData(JSON.stringify(payload));
-          statusText.innerHTML = '<span class="status-ok">Отправлено в Telegram. Mini App может закрываться из-за sendData().</span>';
+          statusText.innerHTML = '<span class="status-warn">Отправлено в Telegram. Закрытие Mini App после сохранения пока остаётся, это исправим отдельным backend-шагом.</span>';
         } catch (error) {
           alert("Не удалось отправить данные в Telegram");
         }
@@ -563,12 +597,29 @@
       }
     }
 
+    function handleReelStepOne() {
+      const url = normalizeText(reelUrl.value);
+
+      if (!url) {
+        alert("Сначала вставь ссылку на Instagram Reel.");
+        return;
+      }
+
+      if (!url.includes("instagram.com/reel/")) {
+        alert("Нужна ссылка именно на Instagram Reel.");
+        return;
+      }
+
+      statusText.innerHTML = '<span class="status-ok">Ссылка принята. Интерфейс для Reel готов. На следующем шаге подключим backend и реальную загрузку текста.</span>';
+    }
+
     showBtn.addEventListener("click", renderText);
     translateBtn.addEventListener("click", translateCurrentSelection);
     clearPhraseBtn.addEventListener("click", () => clearPhrase(true));
     saveBtn.addEventListener("click", saveToBot);
     popupSaveBtn.addEventListener("click", saveToBot);
     closePopupBtn.addEventListener("click", closePopup);
+    getReelTextBtn.addEventListener("click", handleReelStepOne);
 
     popupOverlay.addEventListener("click", (e) => {
       if (e.target === popupOverlay) {
