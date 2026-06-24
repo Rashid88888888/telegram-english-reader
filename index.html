@@ -415,6 +415,11 @@
         .trim();
     }
 
+    function shortenMessage(message, maxLength = 140) {
+      if (!message) return "";
+      return message.length > maxLength ? message.slice(0, maxLength) + "..." : message;
+    }
+
     function openPopup() {
       popupOverlay.classList.add("show");
     }
@@ -636,13 +641,16 @@
 
         sourceText.value = data.transcript || "";
 
-        if (data.source === "fallback") {
-          statusText.innerHTML = `<span class="status-warn">Реальный transcript не найден. Подставлен резервный текст. Причина: ${data.warning || "unknown"}</span>`;
+        if (data.source === "socialkit") {
+          statusText.innerHTML = '<span class="status-ok">Transcript успешно получен через Socialkit. Теперь нажми «Показать текст».</span>';
+        } else if (data.source === "fallback") {
+          const shortWarning = shortenMessage(data.warning || "Transcript not available");
+          statusText.innerHTML = `<span class="status-warn">Реальный transcript не найден. Подставлен резервный текст. Причина: ${shortWarning}</span>`;
         } else {
           statusText.innerHTML = '<span class="status-ok">Текст получен из backend и вставлен в поле. Теперь нажми «Показать текст».</span>';
         }
       } catch (error) {
-        statusText.innerHTML = `<span class="status-error">Не удалось получить текст: ${error.message}</span>`;
+        statusText.innerHTML = `<span class="status-error">Не удалось получить текст: ${shortenMessage(error.message, 180)}</span>`;
       }
     }
 
