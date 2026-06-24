@@ -138,6 +138,11 @@
       font-weight: bold;
     }
 
+    .status-error {
+      color: #b91c1c;
+      font-weight: bold;
+    }
+
     .link-row {
       display: grid;
       grid-template-columns: 1fr;
@@ -268,13 +273,13 @@
         />
       </div>
       <div class="small">
-        Шаг 1: пока мы только добавили поле и кнопку для следующего этапа. Реальный импорт текста по ссылке подключим на следующем шаге через backend.
+        Кнопка «Получить текст» отправляет ссылку в backend и пытается получить transcript.
       </div>
     </div>
 
     <div class="card">
       <div class="label">Вставь английский текст</div>
-      <textarea id="sourceText" placeholder="Вставь сюда транскрибацию или любой английский текст"></textarea>
+      <textarea id="sourceText" placeholder="Сюда автоматически вставится transcript или резервный текст"></textarea>
 
       <div class="small">
         Нажимай слова по очереди. Можно сохранять даже без перевода. После перевода выделение сбросится автоматически.
@@ -294,7 +299,7 @@
     <div class="info">
       <div>Выбрано: <span class="value" id="selectedText">—</span></div>
       <div>Перевод: <span class="value" id="selectedTranslation">—</span></div>
-      <div class="small" id="statusText">Сейчас кнопка «Получить текст» только проверяет, вставлена ли ссылка. Подключение Instagram Reel будет на следующем шаге.</div>
+      <div class="small" id="statusText">Готово к получению текста.</div>
     </div>
   </div>
 
@@ -362,6 +367,8 @@
     let currentSelectedText = "";
     let currentTranslation = "";
     let selectedWords = [];
+
+    const BACKEND_URL = "http://127.0.0.1:5001";
 
     const fallbackDictionary = {
       should: "следует; должен",
@@ -509,7 +516,7 @@
 
       const text = sourceText.value.trim();
       if (!text) {
-        reader.innerHTML = "Сначала вставь текст.";
+        reader.innerHTML = "Сначала получи или вставь текст.";
         return;
       }
 
@@ -588,7 +595,7 @@
       if (tg) {
         try {
           tg.sendData(JSON.stringify(payload));
-          statusText.innerHTML = '<span class="status-warn">Отправлено в Telegram. Закрытие Mini App после сохранения пока остаётся, это исправим отдельным backend-шагом.</span>';
+          statusText.innerHTML = '<span class="status-warn">Отправлено в Telegram. Автозакрытие Mini App пока зависит от логики бота.</span>';
         } catch (error) {
           alert("Не удалось отправить данные в Telegram");
         }
@@ -597,7 +604,7 @@
       }
     }
 
-    function handleReelStepOne() {
+    async function handleReelImport() {
       const url = normalizeText(reelUrl.value);
 
       if (!url) {
@@ -610,7 +617,33 @@
         return;
       }
 
-      statusText.innerHTML = '<span class="status-ok">Ссылка принята. Интерфейс для Reel готов. На следующем шаге подключим backend и реальную загрузку текста.</span>';
+      statusText.innerHTML = '<span class="status-warn">Отправляем ссылку в backend...</span>';
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/transcribe-reel`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || "Ошибка получения текста");
+        }
+
+        sourceText.value = data.transcript || "";
+
+        if (data.source === "fallback") {
+          statusText.innerHTML = `<span class="status-warn">Реальный transcript не найден. Подставлен резервный текст. Причина: ${data.warning || "unknown"}</span>`;
+        } else {
+          statusText.innerHTML = '<span class="status-ok">Текст получен из backend и вставлен в поле. Теперь нажми «Показать текст».</span>';
+        }
+      } catch (error) {
+        statusText.innerHTML = `<span class="status-error">Не удалось получить текст: ${error.message}</span>`;
+      }
     }
 
     showBtn.addEventListener("click", renderText);
@@ -619,7 +652,7 @@
     saveBtn.addEventListener("click", saveToBot);
     popupSaveBtn.addEventListener("click", saveToBot);
     closePopupBtn.addEventListener("click", closePopup);
-    getReelTextBtn.addEventListener("click", handleReelStepOne);
+    getReelTextBtn.addEventListener("click", handleReelImport);
 
     popupOverlay.addEventListener("click", (e) => {
       if (e.target === popupOverlay) {
@@ -627,9 +660,8 @@
       }
     });
 
-    sourceText.value = `You should be the strongest person at your father's funeral, right? Well, that's something to aim for, because it's a transition, a generational transition, and it means that all the people around you are suffering because of their loss. They have someone to turn to who can illustrate proper behavior that the force of character is sufficient to move you beyond the catastrophe. And you need that. And that's a great thing to hypothesize as your aim.`;
-
-    renderText();
+    sourceText.value = "";
+    reader.innerHTML = "Нажми «Получить текст» или вставь текст вручную, затем нажми «Показать текст».";
   </script>
 </body>
 </html>
